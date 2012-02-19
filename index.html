@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+
+<!--
+  Based on: Google HTML5 slide template
+  (http://code.google.com/p/html5slides/)
+
+  Author: Ricardo Kirkner
+-->
+
+<html>
+  <head>
+    <title>Using fabric to standardize the development process | PyCon US 2012
+        - March 06-11| by Ricardo Kirkner</title>
+
+    <meta charset='utf-8'>
+    <meta name="author" content="Ricardo Kirkner" />
+    <meta name="description" content="Using fabric to standardize the
+    development process" />
+    <script src='slides.js'></script>
+  </head>
+
+  <style>
+    /* Your individual styles here, or just use inline styles if that’s
+       what you want. */
+    .current {
+        opacity: 1;
+    }
+    .past, .next {
+        opacity: 0.2;
+    }
+    .far-past, .far-next {
+        opacity: 0;
+    }
+
+    div#contact {
+        position: absolute;
+        top: 350px;
+        left: 300px;
+    }
+    dt {
+        float: left;
+        clear: left;
+        width: 100px;
+    }
+    dd {
+        margin: 0 0 0 110px;
+        margin-top: 50px;
+        margin-bottom: 50px;
+    }
+  </style>
+
+  <body style='display: none'>
+
+    <section class='slides layout-regular'>
+
+      <!-- Your slides (<article>s) go here. Delete or comment out the
+           slides below. -->
+
+      <article>
+        <h1>
+            Using <strong>fabric</strong> to standardize the development
+            process
+        </h1>
+        <p>
+          Ricardo Kirkner
+          <br>
+          PyCon US 2012
+        </p>
+      </article>
+
+      <article>
+        <h3>Who is this guy?</h3>
+        <p>Ricardo Kirkner</p>
+        <p>Works with Python since 2004, currently employed at Canonical</p>
+        <p>Background in system administration, machine learning, web
+          development</p>
+      </article>
+
+      <article>
+        <h3>What is he babbling about?</h3>
+        <ul class="build">
+          <li>What is fabric?</li>
+          <li>Why fabric?</li>
+          <li>Fabric for the development cycle</li>
+        </ul>
+      </article>
+
+      <article class="smaller">
+        <h3>
+          What is fabric?
+        </h3>
+        <q>
+          Fabric is a Python [...] library and command-line tool for
+          streaming the use of SSH for application deployment and system
+          administration tasks.
+        </q>
+      </article>
+
+      <article>
+        <h2>Huh?</h2>
+        <p>
+          <img class="centered" style="height: 500px" src="confused2.jpg" />
+        </p>
+      </article>
+
+      <article>
+        <h3>naïve approach</h3>
+        <pre>
+version = os.popen("ssh myserver 'cat /proc/version'").read()
+        </pre>
+
+        <div class="build">
+          <div>
+            <h3>basic fabric</h3>
+              <pre>
+from fabric.api import run
+env.hosts = ["myserver"]
+version = run("cat /proc/version")
+              </pre>
+          </div>
+        </div>
+      </article>
+
+      <article>
+        <h3>proper fabric</h3>
+        <pre>
+from fabric.api import run
+
+def show_version():
+    version = run("cat /proc/version")
+    print version
+        </pre>
+        <pre>
+$ fab -H myserver show_version
+        </pre>
+        <pre>
+$ fab -l
+Available commands:
+
+show_version
+        </pre>
+      </article>
+
+      <article>
+        <h3>
+          Why fabric?
+        </h3>
+        <p>and not ...</p>
+        <ul>
+          <li>
+            zc.buildout
+          </li>
+          <li>
+            Makefile
+          </li>
+          <li>
+            ...
+          </li>
+        </ul>
+      </article>
+
+      <article>
+        <h2>
+          Fabric for the development cycle
+        </h2>
+      </article>
+
+      <article>
+        <h3>
+          What can you do with fabric?
+        </h3>
+        <ul class="build">
+          <li>bootstrap development environment</li>
+          <li>manage the database</li>
+          <li>run tests</li>
+          <li>build binary packages</li>
+          <li>install packages</li>
+          <li>configure services</li>
+          <li>manage services</li>
+          <li>deploy</li>
+          <li>rollback</li>
+          <li>anything you can do manually on a terminal</li>
+        </ul>
+      </article>
+
+      <article>
+        <h3>
+          Bootstrap
+        </h3>
+        <div class="build">
+          <ol>
+            <li>do sanity checks</li>
+            <li>setup virtualenv</li>
+            <li>install dependencies</li>
+            <li>setup configuration</li>
+          </ol>
+
+          <pre>
+def bootstrap():
+    _check_bootstrap_dependencies()
+    _check_psycopg2_conflicts()
+
+    setup_virtualenv()
+    install_dependencies()
+    setup_configuration()
+          </pre>
+        </div>
+      </article>
+
+      <article>
+        <pre>
+def setup_virtualenv():
+    created = False
+    virtual_env = os.environ.get('VIRTUAL_ENV', None)
+    if virtual_env is None:
+        if not os.path.exists(VIRTUALENV):
+            _create_virtualenv()
+            created = True
+        virtual_env = VIRTUALENV
+    env.virtualenv = os.path.abspath(virtual_env)
+    _activate_virtualenv()
+    return created
+
+def install_dependencies():
+    cmd = ['pip', 'install', '-r', 'requirements.txt']
+    virtualenv_local(' '.join(cmd), capture=False)
+    virtualenv_local('python setup.py develop')
+        </pre>
+      </article>
+
+      <article>
+        <pre>
+def virtualenv_local(command, capture=True):
+    prefix = ''
+    virtual_env = env.get('virtualenv', None)
+    if virtual_env:
+        prefix = ". %s/bin/activate && " % virtual_env
+    command = prefix + command
+    return local(command, capture=capture)
+
+def _activate_virtualenv():
+    activate_this = os.path.abspath(
+        "%s/bin/activate_this.py" % env.virtualenv)
+    execfile(activate_this, dict(__file__=activate_this))
+
+def _create_virtualenv(clear=False):
+    if not os.path.exists(VIRTUALENV) or clear:
+        args = '--no-site-packages --distribute --clear'
+        local("%s /usr/bin/virtualenv %s %s" % (sys.executable,
+            args, VIRTUALENV), capture=False)
+        </pre>
+      </article>
+
+      <article>
+        <h3>
+          Database
+        </h3>
+        <ul>
+          <li>setup database</li>
+          <li>start/stop database</li>
+          <li>create/drop database</li>
+          <li>sync database</li>
+          <li>add/remove users/roles</li>
+        </ul>
+      </article>
+
+      <article>
+        <pre>
+def setup_postgresql_server():
+    _set_postgres_environment()
+    local("mkdir -p %(DATA)s" % env.postgres)
+    local("%(ENV)s %(BIN)s/initdb -A trust -D %(DATA)s" % env.postgres)
+    local("cat <<EOF\nfsync = off\nEOF > %(DATA)s/postgresql.conf" %
+        env.postgres)
+    start_database()
+    setup_database()
+
+def shutdown_postgresql_server():
+    _set_postgres_environment()
+    dropdb()
+    stop_database()
+    local("rm -rf %s" % env.postgres['HOST'])
+        </pre>
+      </article>
+
+      <article>
+          <pre>
+def start_database():
+    _set_postgres_environment()
+    cmd = ['%(ENV)s', '%(BIN)s/pg_ctl', 'start', '-w', '-l',
+        '%(HOST)s/postgresql.log', '-o', '"-F -k %(HOST)s -h \'\'"']
+    local(' '.join(cmd) % env.postgres)
+
+def stop_database():
+    _set_postgres_environment()
+    cmd = ['%(ENV)s', '%(BIN)s/pg_ctl', 'stop', '-w', '-m', 'fast']
+    local(' '.join(cmd) % env.postgres)
+
+def setup_database():
+    success = _check_database()
+    if not success:
+        createdb()
+        _createrole()
+    syncdb()
+          </pre>
+      </article>
+
+      <article>
+          <pre>
+def createdb():
+    _set_postgres_environment()
+    local("%(ENV)s %(BIN)s/createdb %(DATABASE)s" % env.postgres)
+
+def dropdb(warn_only=False):
+    _set_postgres_environment()
+    if isinstance(warn_only, basestring):
+        warn_only = warn_only.lower() == 'yes'
+    with settings(warn_only=warn_only):
+        local("%(ENV)s %(BIN)s/dropdb %(DATABASE)s" % env.postgres)
+          </pre>
+      </article>
+
+      <article>
+        <h3>
+          Development
+        </h3>
+        <ul>
+          <li>run development server</li>
+          <li>reset database</li>
+          <li>run tests</li>
+        </ul>
+      </article>
+
+      <article>
+          <pre>
+def run(*args):
+    manage('runserver', *args)
+
+def manage(command, *args):
+    virtualenv_local(
+        "python django_project/manage.py {0} {1}".format(
+        command, " ".join(args)), capture=False,)
+
+def resetdb():
+    with settings(hide='warnings'):
+        dropdb(warn_only=True)
+    createdb()
+    syncdb()
+          </pre>
+      </article>
+
+      <article>
+          <pre>
+def test(functional='false', coverage=False, extra=''):
+    cmd = ['python django_project/manage.py test --noinput', extra]
+
+    # evaluate parameters
+    functional = functional.lower() in ('t', 'true', '1')
+
+    if functional:
+        databases = get_django_settings('DATABASES')
+        if databases['DATABASES']['default']['ENGINE'] == 'sqlite3':
+            abort("You can't run functional tests on SQLite3")
+
+        cmd.append("--testing_test_discovery_root=''")
+        cmd.append("--testing_test_discovery_exclude='identityprovider.tests.api'")
+
+    virtualenv_local(' '.join(cmd), capture=False)
+          </pre>
+      </article>
+
+      <article>
+        <h3>
+          Continuous integration
+        </h3>
+        <ol class="build">
+          <li>bootstrap</li>
+          <li>setup database</li>
+          <li>run tests</li>
+          <li>gather metrics</li>
+        </ol>
+      </article>
+
+      <article>
+          <pre>
+def jenkins():
+    """Run the tests for jenkins."""
+    bootstrap(jenkins=True)
+    resetdb()
+    # the functional tests depend on some data found in the fixtures
+    manage('loaddata test')
+    manage("jenkins")
+          </pre>
+      </article>
+
+      <article>
+        <h3>
+          Deployment
+        </h3>
+        <ul>
+          <li>deploy</li>
+          <li>build binary packages</li>
+        </ul>
+      </article>
+
+      <article>
+          <pre>
+def deploy(config_branch, build_dir=None, distroseries='lucid'):
+    delete_dir_after_build = False
+    if build_dir is None:
+        build_dir = tempfile.mkdtemp()
+        delete_dir_after_build = True
+
+    dsc_file = build_source_package(build_dir, distroseries=distroseries)
+    binary_files = build_binary_packages(build_dir, dsc_file)
+    install_binary_packages(*binary_files)
+    migrate_database()
+    update_configs(config_branch)
+    preflight_check()
+    restart_services()
+    print("Package installed and services restarted.")
+
+    if delete_dir_after_build:
+        shutil.rmtree(build_dir, ignore_errors=True)
+          </pre>
+      </article>
+
+      <article>
+          <pre>
+def build_source_package(build_dir, recipe_filename='sso.recipe',
+        distroseries='lucid'):
+    clean_local_branch()
+    # We use a recipe to ensure that we always generate later versions
+    # with a timestamp. The recipe refers to the local branch '.' rather
+    # than pulling from the network.
+    recipe = dedent("""\
+        # bzr-builder format 0.2 deb-version {debupstream}-0~{revno}+{time}
+        .""")
+    recipe_path = os.path.join(build_dir, recipe_filename)
+    with open(recipe_path, 'w+') as recipe_file:
+        recipe_file.write(recipe)
+
+    local('bzr dailydeb -&-distribution={0} {1} {2}'.format(
+        distroseries, recipe_path, build_dir))
+    dsc_file = glob(os.path.join(build_dir, '*.dsc'))[0]
+
+    print("Created source package at {0}.".format(dsc_file))
+    return dsc_file
+          </pre>
+      </article>
+
+      <article>
+          <pre>
+def build_binary_packages(build_dir, source_dsc):
+    print("Building binary package for {0}".format(source_dsc))
+    local('sudo pbuilder build --buildresult {0} {1}'.format(
+        build_dir, source_dsc))
+    deb_files = glob(os.path.join(build_dir, "*.deb"))
+    print("Created binary at {0}.".format(deb_files))
+    return deb_files
+
+def install_binary_packages(*deb_files):
+    files = []
+    for deb_file in deb_files:
+        put(deb_file, '.')
+        deb_filename = os.path.basename(deb_file)
+        files.append(deb_filename)
+    sudo('dpkg -i {0}'.format(' '.join(files)), shell=False)
+          </pre>
+      </article>
+
+      <article>
+          <pre>
+def update_configs(config_branch, config_dir='django_project'):
+    """Backup current config files and pull in the latest from a bzr branch.
+
+    If it exists, local.cfg is left unmodified.
+    """
+    timestamp = datetime.utcnow().isoformat()
+    backup_dir = "%s.backup.%s" % (config_dir, timestamp)
+    if exists(config_dir):
+        run("mv %s %s" % (config_dir, backup_dir))
+    put_bzr_export(config_branch, config_dir)
+    if exists(backup_dir + '/local.cfg'):
+        run("cp %s/local.cfg %s" % (backup_dir, config_dir))
+    else:
+        # Create a local.cfg on the server from our template.
+        local_fd, local_path = tempfile.mkstemp()
+        local_file = open(local_path, 'w')
+        local_file.write(LOCAL_CONFIG % env.host_string)
+        local_file.close()
+        put(local_path, "%s/local.cfg" % config_dir, mode=0644)
+        os.remove(local_path)
+          </pre>
+      </article>
+
+      <article>
+          <pre>
+def migrate_database(config_dir=None):
+    if config_dir is None:
+        # By default, the sso config directory is assumed to be
+        # /home/username/django_project.
+        config_dir = 'django_project'
+    run(config_dir + '/manage.py syncdb')
+
+def preflight_check(config_dir='django_project'):
+    run('COLUMNS=40 %s/manage.py preflight ' % config_dir)
+
+def restart_services():
+    sudo('service apache2 graceful', shell=False)
+          </pre>
+      </article>
+
+      <article class="fill">
+        <h3>Questions?</h3>
+        <p>
+          <img src="questions.jpg" />
+        </p>
+      </article>
+
+      <article class="fill">
+        <h3>
+          Contact me
+        </h3>
+
+        <p>
+          <img src="contact25.jpg" />
+        </p>
+
+        <div id="contact">
+          <dl>
+            <dt>email</dt>
+            <dd>ricardo@kirkner.com.ar</dd>
+
+            <dt>twitter</dt>
+            <dd>@ricardokirkner</dd>
+
+            <dt>irc</dt>
+            <dd>pindonga</dd>
+          </dl>
+        </div>
+      </article>
+
+    </section>
+
+  </body>
+</html>
