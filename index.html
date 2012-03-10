@@ -91,9 +91,12 @@
         </h3>
         <q>
           Fabric is a Python [...] library and command-line tool for
-          streaming the use of SSH for application deployment and system
+          streamlining the use of SSH for application deployment or system
           administration tasks.
         </q>
+        <div class="black source">
+            Source: http://docs.fabfile.org/en/1.4.0/index.html#about
+        </div>
       </article>
 
       <article>
@@ -111,7 +114,7 @@ version = os.popen("ssh myserver 'cat /proc/version'").read()
 
         <div class="build">
           <div>
-            <h3>basic fabric</h3>
+            <h3>basic fabric (as a library)</h3>
               <pre>
 from fabric.api import run
 env.hosts = ["myserver"]
@@ -122,7 +125,7 @@ version = run("cat /proc/version")
       </article>
 
       <article>
-        <h3>proper fabric</h3>
+        <h3>proper fabric (as a command-line tool)</h3>
         <pre>
 from fabric.api import run
 
@@ -145,18 +148,37 @@ show_version
         <h3>
           Why fabric?
         </h3>
-        <p>and not ...</p>
-        <ul>
-          <li>
-            zc.buildout
-          </li>
-          <li>
-            Makefile
-          </li>
-          <li>
-            ...
-          </li>
-        </ul>
+        <div class="build">
+          <h5>and not ...</h5>
+          <ul>
+            <li>
+              zc.buildout
+            </li>
+            <li>
+              make
+            </li>
+            <li>
+              ...
+            </li>
+          </ul>
+        </div>
+      </article>
+
+      <article>
+        <h3>Why fabric?</h3>
+        <div class="build">
+          <h5><strong>Two</strong> reasons</h5>
+          <ol>
+            <li class="build">
+              <p>lazyness</p>
+              <p>(or, we don't want to learn new stuff)</p>
+            </li>
+            <li class="build">
+              <p>legacy</p>
+              <p>(or was it lazyness again?)</p>
+            </li>
+          </ol>
+        </div>
       </article>
 
       <article>
@@ -220,24 +242,11 @@ def setup_virtualenv():
     env.virtualenv = os.path.abspath(virtual_env)
     _activate_virtualenv()
     return created
+    </pre>
+    </article>
 
-def install_dependencies():
-    cmd = ['pip', 'install', '-r', 'requirements.txt']
-    virtualenv_local(' '.join(cmd), capture=False)
-    virtualenv_local('python setup.py develop')
-        </pre>
-      </article>
-
-      <article>
-        <pre>
-def virtualenv_local(command, capture=True):
-    prefix = ''
-    virtual_env = env.get('virtualenv', None)
-    if virtual_env:
-        prefix = ". %s/bin/activate && " % virtual_env
-    command = prefix + command
-    return local(command, capture=capture)
-
+    <article>
+    <pre>
 def _activate_virtualenv():
     activate_this = os.path.abspath(
         "%s/bin/activate_this.py" % env.virtualenv)
@@ -249,6 +258,24 @@ def _create_virtualenv(clear=False):
         local("%s /usr/bin/virtualenv %s %s" % (sys.executable,
             args, VIRTUALENV), capture=False)
         </pre>
+      </article>
+
+      <article>
+        <pre>
+def install_dependencies():
+    cmd = ['pip', 'install', '-r', 'requirements.txt']
+    virtualenv_local(' '.join(cmd), capture=False)
+    virtualenv_local('python setup.py develop')
+        </pre>
+        <pre>
+def virtualenv_local(command, capture=True):
+    prefix = ''
+    virtual_env = env.get('virtualenv', None)
+    if virtual_env:
+        prefix = ". %s/bin/activate && " % virtual_env
+    command = prefix + command
+    return local(command, capture=capture)
+    </pre>
       </article>
 
       <article>
@@ -346,26 +373,10 @@ def resetdb():
         dropdb(warn_only=True)
     createdb()
     syncdb()
-          </pre>
-      </article>
 
-      <article>
-          <pre>
-def test(functional='false', coverage=False, extra=''):
-    cmd = ['python django_project/manage.py test --noinput', extra]
-
-    # evaluate parameters
-    functional = functional.lower() in ('t', 'true', '1')
-
-    if functional:
-        databases = get_django_settings('DATABASES')
-        if databases['DATABASES']['default']['ENGINE'] == 'sqlite3':
-            abort("You can't run functional tests on SQLite3")
-
-        cmd.append("--testing_test_discovery_root=''")
-        cmd.append("--testing_test_discovery_exclude='identityprovider.tests.api'")
-
-    virtualenv_local(' '.join(cmd), capture=False)
+def test(extra=''):
+    args = ['--noinput', extra]
+    manage('test', *args)
           </pre>
       </article>
 
@@ -373,24 +384,23 @@ def test(functional='false', coverage=False, extra=''):
         <h3>
           Continuous integration
         </h3>
-        <ol class="build">
-          <li>bootstrap</li>
-          <li>setup database</li>
-          <li>run tests</li>
-          <li>gather metrics</li>
-        </ol>
-      </article>
+        <div class="build">
+          <ol>
+            <li>bootstrap</li>
+            <li>setup database</li>
+            <li>run tests</li>
+            <li>gather metrics</li>
+          </ol>
 
-      <article>
           <pre>
 def jenkins():
     """Run the tests for jenkins."""
     bootstrap(jenkins=True)
     resetdb()
-    # the functional tests depend on some data found in the fixtures
     manage('loaddata test')
     manage("jenkins")
           </pre>
+        </div>
       </article>
 
       <article>
@@ -411,7 +421,8 @@ def deploy(config_branch, build_dir=None, distroseries='lucid'):
         build_dir = tempfile.mkdtemp()
         delete_dir_after_build = True
 
-    dsc_file = build_source_package(build_dir, distroseries=distroseries)
+    dsc_file = build_source_package(build_dir,
+        distroseries=distroseries)
     binary_files = build_binary_packages(build_dir, dsc_file)
     install_binary_packages(*binary_files)
     migrate_database()
@@ -430,11 +441,8 @@ def deploy(config_branch, build_dir=None, distroseries='lucid'):
 def build_source_package(build_dir, recipe_filename='sso.recipe',
         distroseries='lucid'):
     clean_local_branch()
-    # We use a recipe to ensure that we always generate later versions
-    # with a timestamp. The recipe refers to the local branch '.' rather
-    # than pulling from the network.
     recipe = dedent("""\
-        # bzr-builder format 0.2 deb-version {debupstream}-0~{revno}+{time}
+        # bzr-builder format 0.2 deb-version {revno}+{time}
         .""")
     recipe_path = os.path.join(build_dir, recipe_filename)
     with open(recipe_path, 'w+') as recipe_file:
@@ -472,10 +480,6 @@ def install_binary_packages(*deb_files):
       <article>
           <pre>
 def update_configs(config_branch, config_dir='django_project'):
-    """Backup current config files and pull in the latest from a bzr branch.
-
-    If it exists, local.cfg is left unmodified.
-    """
     timestamp = datetime.utcnow().isoformat()
     backup_dir = "%s.backup.%s" % (config_dir, timestamp)
     if exists(config_dir):

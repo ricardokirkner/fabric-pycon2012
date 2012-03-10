@@ -584,29 +584,31 @@ article.smaller q::after {
 
 /* Pretty print */
 
-.prettyprint .str, /* string content */
-.prettyprint .atv { /* a markup attribute value */
+/*
+.prettyprint .str,
+.prettyprint .atv {
   color: rgb(0, 138, 53); 
 }  
-.prettyprint .kwd, /* a keyword */
-.prettyprint .tag { /* a markup tag name */
+.prettyprint .kwd,
+.prettyprint .tag {
   color: rgb(0, 102, 204);
 }
-.prettyprint .com { /* a comment */
+.prettyprint .com {
   color: rgb(127, 127, 127); 
   font-style: italic; 
 }  
-.prettyprint .lit { /* a literal value */
+.prettyprint .lit {
   color: rgb(127, 0, 0);
 }  
-.prettyprint .pun, /* punctuation, lisp open bracket, lisp close bracket */
+.prettyprint .pun,
 .prettyprint .opn, 
 .prettyprint .clo { 
   color: rgb(127, 127, 127); 
 }
-.prettyprint .typ, /* a type name */
-.prettyprint .atn, /* a markup attribute name */ 
+.prettyprint .typ,
+.prettyprint .atn,
 .prettyprint .dec, 
-.prettyprint .var { /* a declaration; a variable name */
+.prettyprint .var {
   color: rgb(127, 0, 127);
-}  
+}
+*/
