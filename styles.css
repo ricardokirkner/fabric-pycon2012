@@ -584,14 +584,13 @@ article.smaller q::after {
 
 /* Pretty print */
 
-/*
 .prettyprint .str,
 .prettyprint .atv {
-  color: rgb(0, 138, 53); 
-}  
+  color: rgb(255, 0, 0); 
+}
 .prettyprint .kwd,
 .prettyprint .tag {
-  color: rgb(0, 102, 204);
+  color: rgb(0, 0, 255);
 }
 .prettyprint .com {
   color: rgb(127, 127, 127); 
@@ -611,4 +610,3 @@ article.smaller q::after {
 .prettyprint .var {
   color: rgb(127, 0, 127);
 }
-*/
